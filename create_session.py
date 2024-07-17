@@ -208,7 +208,6 @@ def create_string_from_dict_attributes(dict):
 
   string = ""
   last = list(dict.keys())[-1]
-  print(last)
   for key in list(dict.keys()):
     string += f"{key}, "
     if key == last:
