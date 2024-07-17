@@ -83,8 +83,19 @@ class Session():
         self.locations={}
         self.user_location_choice=""
         self.encounter={}
-    def environment_creation(self):
-        return
+    async def environment_creation(self,client,system_prompt,prompt):
+        
+        environments = await client.call_openai_model(system_message = system_prompt, 
+                                    user_message = prompt, 
+                                    model=client.azure_oai_deployment
+                                    )
+        
+        # clean output
+        environments= environments.replace('```', '')
+        environments= environments.replace('json', '')
+        #store in session
+        self.environments = json.loads(environments)
+        
     async def location_creation(self,client,system_prompt,prompt):
         
         locations = await client.call_openai_model(system_message = system_prompt, 
@@ -103,8 +114,30 @@ class Session():
         elif isinstance(location_json[list(location_json.keys())[0]],dict):
             self.locations = location_json
 
-    def encounter_creation(self):
-        return
+    async def encounter_creation(self,client,system_prompt,prompt):
+        encounter = await client.call_openai_model(system_message = system_prompt, 
+                                    user_message = prompt, 
+                                    model=client.azure_oai_deployment
+                                    )
+        # clean output
+        encounter= encounter.replace('```', '')
+        encounter= encounter.replace('json', '')
+        # print(encounter)
+        #store in session
+        encounter_json= json.loads(encounter)
+        print(encounter_json)
+        if isinstance(encounter_json[list(encounter_json.keys())[0]],list):
+            self.encounter = transform(encounter_json[list(encounter_json.keys())[0]])
+            print("it is a list",self.encounter)
+        elif isinstance(encounter_json[list(encounter_json.keys())[0]],dict):
+            self.encounter = encounter_json
+            print("it is a dictionary",self.encounter)
+        elif isinstance(encounter_json,dict):
+            self.encounter = encounter_json
+        # self.encounter = transform(encounter_json["encounter"])
+
+        # self.encounter = json.loads(encounter)
+        print(self.encounter)
 
 
 
@@ -121,17 +154,14 @@ async def main():
         
         # Create enviroments and store name on a list
         user_text = "Create 4 Environments"
-        environments = await azure_client.call_openai_model(system_message = prompt_json['environment_json'][0], 
-                                    user_message = user_text, 
-                                    model=azure_client.azure_oai_deployment
-                                    )
+
+        # Create environment
+        await session.environment_creation(
+            client=azure_client,
+            system_prompt=prompt_json['environment_json'][0],
+            prompt=user_text
+        )
         
-        # clean output
-        environments= environments.replace('```', '')
-        environments= environments.replace('json', '')
-        #store in session
-        session.environments = json.loads(environments)
-        # environment_keys = list(session.environments.keys())
         environments_string = create_string_from_dict_attributes(session.environments)
         
         #user choice
@@ -140,7 +170,7 @@ async def main():
         
         #Create locations
         user_text = f"Create 4 Locations using this description: {environment_description}"
-        
+        # Create location
         await session.location_creation(
             client = azure_client,
             system_prompt = prompt_json['environment_json'][0],
@@ -153,17 +183,14 @@ async def main():
         session.user_location_choice = input(f"Choose from the following: {locations_string}. ")
         location_description = session.locations[session.user_location_choice]["description"]
         
-        #Create encounter
+        
         user_text = f"Create an encounter using this description: {location_description}"
-        encounter = await azure_client.call_openai_model(system_message = prompt_json['encounter_json'][0], 
-                                    user_message = user_text, 
-                                    model=azure_client.azure_oai_deployment
-                                    )
-        # clean output
-        encounter= encounter.replace('```', '')
-        encounter= encounter.replace('json', '')
-        #store in session
-        session.encounter = json.loads(encounter)
+        # print(user_text)
+        await session.encounter_creation(
+            client=azure_client,
+            system_prompt=prompt_json['encounter_json'][0],
+            prompt=user_text
+        )
 
         
     except Exception as error:
@@ -185,7 +212,7 @@ def create_string_from_dict_attributes(dict):
   return string
 
 def transform(array):
-    print(type(array),array)
+    print(type(array))
     new_dict = {}
     for item in array:
         name = item['name']
