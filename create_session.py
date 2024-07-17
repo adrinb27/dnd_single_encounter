@@ -151,5 +151,23 @@ async def main():
     except Exception as error:
         print(error) 
 
+def create_string_from_dict_attributes(dict):
+  """Creates a string out of the attributes of a dictionary.
+
+  Args:
+    dict: The dictionary to convert to a string.
+
+  Returns:
+    A string containing the attributes of the dictionary.
+  """
+
+  string = ""
+  for key, value in dict.items():
+    string += f"{key}, "
+  return string
+
+
+
+
 if __name__ == '__main__': 
     asyncio.run(main())
