@@ -165,7 +165,7 @@ async def main():
         environments_string = create_string_from_dict_attributes(session.environments)
         
         #user choice
-        session.user_enviroment_choice = input(f"Choose from the following: {environments_string}. ")
+        session.user_enviroment_choice = input(f"Choose from the following: {environments_string}")
         environment_description = session.environments[session.user_enviroment_choice]["description"] 
         
         #Create locations
@@ -180,7 +180,7 @@ async def main():
         locations_string = create_string_from_dict_attributes(session.locations)
         
         #user choice
-        session.user_location_choice = input(f"Choose from the following: {locations_string}. ")
+        session.user_location_choice = input(f"Choose from the following: {locations_string}")
         location_description = session.locations[session.user_location_choice]["description"]
         
         
@@ -207,12 +207,15 @@ def create_string_from_dict_attributes(dict):
   """
 
   string = ""
-  for key, value in dict.items():
+  last = list(dict.keys())[-1]
+  print(last)
+  for key in list(dict.keys()):
     string += f"{key}, "
+    if key == last:
+      string += f"and {key}. "
   return string
 
 def transform(array):
-    print(type(array))
     new_dict = {}
     for item in array:
         name = item['name']
