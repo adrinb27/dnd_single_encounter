@@ -7,12 +7,21 @@ from dotenv import load_dotenv
 from openai import AsyncAzureOpenAI
 
 # Add Azure OpenAI package
+## List:
+# - Session:
+#     - Location
+#     - Envirioment
+#     - Characters
+#     - Encounter Goal
 
 
 # Set to True to print the full response from OpenAI for each call
 printFullResponse = False
 load_dotenv()
 
+class Session():
+    def __init__(self):
+        self.session_id= 0
 class Encounter():
     def __init__(self):
         self.encounter_id = 0
@@ -28,7 +37,9 @@ class Encounter():
             "font_color": "#FFFFFF",
             "has_text": False
         }
-
+class Location():
+    def __init__(self) -> None:
+        pass
 class AzureOpenAIClient():
     def __init__(self):
         self.azure_oai_endpoint = os.getenv("AZURE_OAI_ENDPOINT")
@@ -65,7 +76,7 @@ class AzureOpenAIClient():
 
         return response.choices[0].message.content
     
-    async def call_dalee(self,model,prompt):
+    async def call_dalee(self,model,prompt,file_name):
         dalle_response = await self.client.images.generate(
                         model=model,
                         prompt=prompt,
@@ -90,11 +101,12 @@ class AzureOpenAIClient():
         
         #saves image locally    
         if image_response.status_code == 200:
-            with open(f'{directory}\generated_image.png', 'wb') as f:
+            with open(f'{directory}\{file_name}.png', 'wb') as f:
                 f.write(image_response.content)
             print("Image downloaded and saved as 'generated_image.png'")
         else:
             print("Failed to download the image")
+
 async def main(): 
         
     try: 
@@ -106,32 +118,42 @@ async def main():
         # Configure the Azure OpenAI client
         azure_client = AzureOpenAIClient()
 
-        # while True:
-        # Pause the app to allow the user to enter the system prompt
-        # print("------------------\nPausing the app to allow you to change the system prompt.\nPress enter to continue...")
-        # input()
-
         # Read in system message and prompt for user message
         user_text = input("Enter user message, or 'quit' to exit: ")
         if user_text.lower() == 'quit':
             print('Exiting program...')
             exit()
         
-        summary_response = await azure_client.call_openai_model(system_message = prompt_json['summary'][0], 
+        theme_response = await azure_client.call_openai_model(system_message = prompt_json['theme'][0], 
                                 user_message = user_text, 
                                 model=azure_client.azure_oai_deployment
                                 )
         
-        
-        location_response = await azure_client.call_openai_model(system_message = prompt_json['location'][0], 
-                                user_message = summary_response, 
+        # How many characters?
+        # Loop through and create them and choice 
+        character_choices = await azure_client.call_openai_model(system_message = prompt_json['character_choices'][0], 
+                                user_message = theme_response, 
                                 model=azure_client.azure_oai_deployment
                                 )
         
-        await azure_client.call_dalee(azure_client.azure_dalle_deployment,location_response)
+        # character_picture = await azure_client.call_openai_model(system_message = prompt_json['character_picture'][0], 
+        #                         user_message = character_choices, 
+        #                         model=azure_client.azure_oai_deployment
+        #                         )
+        
+        backstory = await azure_client.call_openai_model(system_message = prompt_json['backstory'][0], 
+                                user_message = character_choices, 
+                                model=azure_client.azure_oai_deployment
+                                )
+        
+        # await azure_client.call_dalee(
+        #     model=azure_client.azure_dalle_deployment,
+        #     prompt=character_picture,
+        #     file_name=picture_name)
 
 
     except Exception as ex:
         print(ex)
+
 if __name__ == '__main__': 
     asyncio.run(main())
