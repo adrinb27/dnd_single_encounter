@@ -74,27 +74,32 @@ class AzureOpenAIClient():
             print("Image downloaded and saved as 'generated_image.png'")
         else:
             print("Failed to download the image")
-
+#TODO save only world chosen
 class Session():
     def __init__(self):
         self.session_id= 0
-        self.environments={}
-        self.user_enviroment_choice=""
+        self.world={}
         self.locations={}
         self.user_location_choice=""
         self.encounter={}
-    async def environment_creation(self,client,system_prompt,prompt):
+    
+    async def world_creation(self,client,system_prompt,prompt):
         
-        environments = await client.call_openai_model(system_message = system_prompt, 
+        worlds = await client.call_openai_model(system_message = system_prompt, 
                                     user_message = prompt, 
                                     model=client.azure_oai_deployment
                                     )
         
         # clean output
-        environments= environments.replace('```', '')
-        environments= environments.replace('json', '')
+        worlds= worlds.replace('```', '')
+        worlds= worlds.replace('json', '')
         #store in session
-        self.environments = json.loads(environments)
+        worlds = json.loads(worlds)
+        worlds_string = create_string_from_dict_attributes(worlds)
+        world_choice = input(f"Choose from the following: {worlds_string}")
+        self.world = worlds[world_choice]
+        self.world["name"] = world_choice
+
         
     async def location_creation(self,client,system_prompt,prompt):
         
@@ -153,44 +158,44 @@ async def main():
         session.session_id = ''.join(random.choice('0123456789') for i in range(8))
         
         # Create enviroments and store name on a list
-        user_text = "Create 4 Environments"
+        user_text = "Create 4 worlds"
 
         # Create environment
-        await session.environment_creation(
+        await session.world_creation(
             client=azure_client,
             system_prompt=prompt_json['environment_json'][0],
             prompt=user_text
         )
         
-        environments_string = create_string_from_dict_attributes(session.environments)
+        # worlds_string = create_string_from_dict_attributes(session.worlds)
         
-        #user choice
-        session.user_enviroment_choice = input(f"Choose from the following: {environments_string}")
-        environment_description = session.environments[session.user_enviroment_choice]["description"] 
+        # #user choice
+        # session.user_enviroment_choice = input(f"Choose from the following: {worlds_string}")
+        # environment_description = session.worlds[session.user_enviroment_choice]["description"] 
         
-        #Create locations
-        user_text = f"Create 4 Locations using this description: {environment_description}"
-        # Create location
-        await session.location_creation(
-            client = azure_client,
-            system_prompt = prompt_json['environment_json'][0],
-            prompt = user_text
-            )
+        # #Create locations
+        # user_text = f"Create 4 Locations using this description: {environment_description}"
+        # # Create location
+        # await session.location_creation(
+        #     client = azure_client,
+        #     system_prompt = prompt_json['environment_json'][0],
+        #     prompt = user_text
+        #     )
         
-        locations_string = create_string_from_dict_attributes(session.locations)
+        # locations_string = create_string_from_dict_attributes(session.locations)
         
-        #user choice
-        session.user_location_choice = input(f"Choose from the following: {locations_string}")
-        location_description = session.locations[session.user_location_choice]["description"]
+        # #user choice
+        # session.user_location_choice = input(f"Choose from the following: {locations_string}")
+        # location_description = session.locations[session.user_location_choice]["description"]
         
         
-        user_text = f"Create an encounter using this description: {location_description}"
-        # print(user_text)
-        await session.encounter_creation(
-            client=azure_client,
-            system_prompt=prompt_json['encounter_json'][0],
-            prompt=user_text
-        )
+        # user_text = f"Create an encounter using this description: {location_description}"
+        # # print(user_text)
+        # await session.encounter_creation(
+        #     client=azure_client,
+        #     system_prompt=prompt_json['encounter_json'][0],
+        #     prompt=user_text
+        # )
 
         
     except Exception as error:
@@ -209,9 +214,10 @@ def create_string_from_dict_attributes(dict):
   string = ""
   last = list(dict.keys())[-1]
   for key in list(dict.keys()):
-    string += f"{key}, "
     if key == last:
       string += f"and {key}. "
+    else:
+        string += f"{key}, "
   return string
 
 def transform(array):
