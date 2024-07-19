@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 # Class import
 from clients import AzureOpenAIClient, AzureCosmosDBClient
-from session import Session , World
+from session import Session , World , Location
 load_dotenv()
 
 
@@ -22,17 +22,38 @@ async def main():
     
     user_text = "Create 4 worlds"
     session = Session()
-    world = World(session)
+    world = World(session=session)
+    location = Location(session=session)
+    #create world
+    await world.create_world(
+                client=azure_open_ai_client,
+                system_prompt=prompt_json['world_json'][0],
+                prompt=user_text
+                )
     
-    await world.create_world(client=azure_open_ai_client,
-                system_prompt=prompt_json['environment_json'][0],
-                prompt=user_text)
-    # print(world.world)
-    
-    # insert world item
+    # insert world item to cosmos container
     item = {"id":session.session_id,"session_id":session.session_id,"type":world.type,"world":world.world}  
     azure_cosmos_client.insert_items(item)
     world.item = item
+    
+    # create location
+    world_description = world.world["description"]
+    
+    user_text = f"Create 4 Locations using this description: {world_description}"
+    
+    await location.create_location(
+                client=azure_open_ai_client,
+                system_prompt=prompt_json['location_json'][0],
+                prompt=user_text
+    )
+    item = {"id":session.session_id,"session_id":session.session_id,"type":location.type,"location":location.location}  
+    azure_cosmos_client.insert_items(item)
+    world.item = item
+
+    # create charaters
+    # create encounter
+
+
 
 
 
