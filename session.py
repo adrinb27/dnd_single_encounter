@@ -94,7 +94,7 @@ class Encounter(Location):
         encounter= encounter.replace('```', '')
         encounter= encounter.replace('json', '')
         #store in session
-        print(encounter)
+        # print(encounter)
         try:
             encounter_json= json.loads(encounter)
         except Exception as error:
