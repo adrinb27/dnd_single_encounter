@@ -29,12 +29,12 @@ async def main():
                 prompt=user_text)
     # print(world.world)
     
-    database = azure_cosmos_client.client.get_database_client(azure_cosmos_client.database)
-    container = azure_cosmos_client.client.get_container_client(azure_cosmos_client.container)
-    item = {"session_id":session.session_id,"type":"world","world":world.world}
-    container.upsert_item(
-                item
-    )
+    # insert world item
+    item = {"id":session.session_id,"session_id":session.session_id,"type":world.type,"world":world.world}  
+    azure_cosmos_client.insert_items(item)
+    world.item = item
+
+
 
 if __name__ == '__main__': 
     asyncio.run(main())

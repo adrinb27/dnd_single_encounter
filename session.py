@@ -7,10 +7,14 @@ class Session():
         self.session_id= ''.join(random.choice('0123456789') for i in range(8))
 
 class World(Session):
+    
     def __init__(self,session):
         super().__init__()
         self.session_id= session.session_id
+        self.type = "world"
         self.world = {}
+        self.item = {}
+
     async def create_world(self,client,system_prompt,prompt):
         worlds = await client.call_openai_model(system_message = system_prompt, 
                                         user_message = prompt, 

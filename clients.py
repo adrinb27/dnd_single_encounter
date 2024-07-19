@@ -80,3 +80,10 @@ class AzureCosmosDBClient():
         self.database = os.environ['COSMOS_DATABASE_NAME']
         self.container = os.environ['COSMOS_CONTAINER_NAME']
         self.client = CosmosClient(self.URL, credential=self.KEY)
+    
+    def insert_items(self,item):
+        database = self.client.get_database_client(self.database)
+        container = database.get_container_client(self.container)
+        container.upsert_item(
+                    item
+        )
