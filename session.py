@@ -5,6 +5,7 @@ from utils import create_string_from_dict_attributes, transform
 class Session():
     def __init__(self):
         self.session_id= ''.join(random.choice('0123456789') for i in range(8))
+        self.type="session"
 
 class World(Session):
     
@@ -75,8 +76,9 @@ class Location(World):
             # print(locations)
             locations_string = create_string_from_dict_attributes(locations)
             location_choice = input(f"Choose from the following: {locations_string}")
-            self.location = locations[location_choice]
             self.location["name"] = location_choice          
+            self.location["description"] = locations[location_choice]
+            # print(self.location)
 
 class Encounter(Location):
     def __init__(self):
@@ -97,19 +99,17 @@ class Encounter(Location):
         # print(encounter)
         try:
             encounter_json= json.loads(encounter)
+            # print(encounter_json)
+            if isinstance(encounter_json[list(encounter_json.keys())[0]],list):
+                self.encounter = transform(encounter_json[list(encounter_json.keys())[0]])
+                # print("it is a list",self.encounter)
+            elif isinstance(encounter_json[list(encounter_json.keys())[0]],dict):
+                self.encounter = encounter_json
+                # print("it is a dictionary",self.encounter)
+            elif isinstance(encounter_json,dict):
+                self.encounter = encounter_json
+        # self.encounter = transform(encounter_json["encounter"])
         except Exception as error:
             print(error)
-
-        # print(encounter_json)
-        if isinstance(encounter_json[list(encounter_json.keys())[0]],list):
-            self.encounter = transform(encounter_json[list(encounter_json.keys())[0]])
-            # print("it is a list",self.encounter)
-        elif isinstance(encounter_json[list(encounter_json.keys())[0]],dict):
-            self.encounter = encounter_json
-            # print("it is a dictionary",self.encounter)
-        elif isinstance(encounter_json,dict):
-            self.encounter = encounter_json
-        # self.encounter = transform(encounter_json["encounter"])
-
         # self.encounter = json.loads(encounter)
         # print(self.encounter)

@@ -1,3 +1,5 @@
+#TODO create a helper class
+
 def create_string_from_dict_attributes(dict):
   """Creates a string out of the attributes of a dictionary.
 

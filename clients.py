@@ -87,3 +87,9 @@ class AzureCosmosDBClient():
         container.upsert_item(
                     item
         )
+    def patching_items(self,session_id,partition_key,operations):
+        
+        database = self.client.get_database_client(self.database)
+        container = database.get_container_client(self.container)
+        
+        response = container.patch_item(item=session_id, partition_key=partition_key, patch_operations=operations)
