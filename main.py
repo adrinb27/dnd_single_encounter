@@ -24,10 +24,10 @@ async def main():
     
     user_text = "Create 3 worlds"
     session = Session()
-    world = World()
-    location = Location()
-    encounter = Encounter()
-    
+    world = World(session)
+    location = Location(session)
+    encounter = Encounter(session)
+
     # TODO create session leger document, add app version 
     item = {
            "id":session.session_id,
@@ -42,7 +42,7 @@ async def main():
 
     #create world
     await world.create_world(
-                client=azure_open_ai_client,
+                oai_client=azure_open_ai_client,
                 system_prompt=prompt_json['world_json'][0],
                 prompt=user_text
                 )
@@ -64,9 +64,12 @@ async def main():
     
     azure_cosmos_client.patching_items(session.session_id,f"{session.session_id}_{session.type}",operations)
 
-    
+    world_content = await world.get_content(azure_cosmos_client)
+
     # create location
-    world_description = world.world["description"]
+
+    world_description = world_content["description"]
+
     
     user_text = f"Create 3 Locations using this description: {world_description}"
     
@@ -75,6 +78,7 @@ async def main():
                 system_prompt=prompt_json['location_json'][0],
                 prompt=user_text
     )
+    
     item = {
            "id":session.session_id,
            "sessionid_type":f"{session.session_id}_{location.type}",
@@ -92,12 +96,15 @@ async def main():
     
     azure_cosmos_client.patching_items(session.session_id,f"{session.session_id}_{session.type}",operations)
 
-    # # TODO create charaters
-    # # create 4 characters and save it
-    # # loop and save the type to create unique characters
+    location_content = await location.get_content(azure_cosmos_client)
 
-    # create encounter
-    location_description = location.location["description"]
+
+#     # # TODO create charaters
+#     # # create 4 characters and save it
+#     # # loop and save the type to create unique characters
+
+#     # create encounter
+    location_description = location_content["description"]
     
     user_text = f"Create an Encounter using this description: {location_description}"
     
@@ -124,7 +131,8 @@ async def main():
     
     azure_cosmos_client.patching_items(session.session_id,f"{session.session_id}_{session.type}",operations)
 
-    # # TODO create creature
+#     # TODO Creatures on the encounter
+
 
     # # Finish Session:
     # Update leger
@@ -134,7 +142,6 @@ async def main():
     
     azure_cosmos_client.patching_items(session.session_id,f"{session.session_id}_{session.type}",operations)
 
-    # TODO Creatures on the encounter
 
 
 

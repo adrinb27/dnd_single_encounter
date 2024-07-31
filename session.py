@@ -9,17 +9,17 @@ class Session():
 
 class World(Session):
     
-    def __init__(self):
+    def __init__(self,session):
         super().__init__()
-        # self.session_id= session.session_id
+        self.session_id= session.session_id
         self.type = "world"
         self.world = {}
         self.item = {}
 
-    async def create_world(self,client,system_prompt,prompt):
-        worlds = await client.call_openai_model(system_message = system_prompt, 
+    async def create_world(self,oai_client,system_prompt,prompt):
+        worlds = await oai_client.call_openai_model(system_message = system_prompt, 
                                         user_message = prompt, 
-                                        model=client.azure_oai_deployment
+                                        model=oai_client.azure_oai_deployment
                                         )
             
             # clean output
@@ -31,11 +31,23 @@ class World(Session):
         world_choice = input(f"Choose from the following: {worlds_string}")
         self.world = worlds[world_choice]
         self.world["name"] = world_choice
+    
+    async def get_content(self,cosmos_client):
+        database = cosmos_client.client.get_database_client(cosmos_client.database)
+        container = database.get_container_client(cosmos_client.container)
+        
+        query = f'SELECT c.{self.type} FROM mycontainer c WHERE c.id="{self.session_id}" and c.sessionid_type="{self.session_id}_{self.type}"'
+        
+        items = container.query_items(query=query,enable_cross_partition_query=True)
+        content = {}
+        for item in items:
+            content = item[f"{self.type}"]
+        return content
 
 class Location(World):
-    def __init__(self):
-        super().__init__()
-        # self.session_id= session.session_id
+    def __init__(self,session):
+        super().__init__(session)
+        self.session_id= session.session_id
         self.type = "location"
         self.location = {}
         self.item = {}
@@ -79,11 +91,13 @@ class Location(World):
             self.location["name"] = location_choice          
             self.location["description"] = locations[location_choice]
             # print(self.location)
-
+class Character(World):
+    def __init__(self, session):
+        super().__init__(session)
 class Encounter(Location):
-    def __init__(self):
-        super().__init__()
-        # self.session_id= session.session_id
+    def __init__(self,session):
+        super().__init__(session)
+        self.session_id= session.session_id
         self.type = "encounter"
         self.location = {}
         self.item = {}
