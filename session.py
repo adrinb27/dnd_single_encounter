@@ -91,7 +91,7 @@ class Location(World):
             self.location["name"] = location_choice          
             self.location["description"] = locations[location_choice]
             # print(self.location)
-class Character(World):
+class Characters(World):
     def __init__(self, session):
         super().__init__(session)
 class Encounter(Location):
@@ -127,3 +127,6 @@ class Encounter(Location):
             print(error)
         # self.encounter = json.loads(encounter)
         # print(self.encounter)
+class Creatures(Encounter):
+    def __init__(self, session):
+        super().__init__(session)
