@@ -1,7 +1,10 @@
 import random
 import json
+import numpy
 from utils import create_string_from_dict_attributes, transform
 
+with open("prompt.json") as prompt_file:
+                prompt_json=json.load(prompt_file)
 class Session():
     def __init__(self):
         self.session_id= ''.join(random.choice('0123456789') for i in range(8))
@@ -15,6 +18,7 @@ class World(Session):
         self.type = "world"
         self.world = {}
         self.item = {}
+        self.content = {}
 
     async def create_world(self,oai_client,system_prompt,prompt):
         worlds = await oai_client.call_openai_model(system_message = system_prompt, 
@@ -22,11 +26,13 @@ class World(Session):
                                         model=oai_client.azure_oai_deployment
                                         )
             
-            # clean output
+        # clean output
         worlds= worlds.replace('```', '')
         worlds= worlds.replace('json', '')
         #store in session
+        
         worlds = json.loads(worlds)
+
         worlds_string = create_string_from_dict_attributes(worlds)
         world_choice = input(f"Choose from the following: {worlds_string}")
         self.world = worlds[world_choice]
@@ -43,6 +49,23 @@ class World(Session):
         for item in items:
             content = item[f"{self.type}"]
         return content
+    async def create_content(self,oai_client,system_prompt,prompt):
+        content = await oai_client.call_openai_model(system_message = system_prompt, 
+                                    user_message = prompt, 
+                                    model=oai_client.azure_oai_deployment
+                                    )
+        # clean output
+        content= content.replace('```', '')
+        content= content.replace('json', '')
+        # print(content)
+        #store in session
+        try:
+            content = json.loads(content)
+            self.content = content
+        except:
+            content = content
+            self.content = content
+
 
 class Location(World):
     def __init__(self,session):
@@ -94,6 +117,81 @@ class Location(World):
 class Characters(World):
     def __init__(self, session):
         super().__init__(session)
+        self.session_id= session.session_id
+        self.type = "characters"
+        self.world = {}
+        self.item = {}
+        self.trait =""
+        self.player_number = 0
+    async def create_characters(self,azure_open_ai_client,azure_cosmos_client):
+        character_traits = [  
+        "Ambitious",  
+        "Compassionate",  
+        "Cunning",  
+        "Diligent",  
+        "Eccentric",  
+        "Fearless",  
+        "Generous",  
+        "Honest",  
+        "Impulsive",  
+        "Joyful",  
+        "Kind-hearted",  
+        "Loyal",  
+        "Melancholic",  
+        "Naïve",  
+        "Optimistic",  
+        "Pessimistic",  
+        "Quirky",  
+        "Resourceful",  
+        "Stubborn",  
+        "Tenacious",  
+        "Unpredictable",  
+        "Vain",  
+        "Wise",  
+        "Xenial",  
+        "Yearning",  
+        "Zealous",  
+        "Aloof",  
+        "Brave",  
+        "Charismatic",  
+        "Devout"  
+        ] 
+        character_traits= numpy.array(character_traits)
+        res = random.sample(range(1, 30), 1)
+
+        user_text = f"Create 1 unique characters that are {character_traits[res[0]]} respectively"
+
+        await self.create_content(
+                oai_client=azure_open_ai_client,
+                    system_prompt=prompt_json['character_json'][0],
+                    prompt=user_text
+                    )
+        # print(character.content["Feature & Traits"])
+        item = {
+           "id":self.session_id,
+           "sessionid_type":f"{self.session_id}_{self.type}",
+           "session_id":self.session_id,
+           self.type:self.content,
+           "type":self.type,
+           "player_number":self.player_number,
+           "charachter_definition":self.content["Definition"],
+           "character_stats":self.content["Stats"],
+           "character_saving_throws":self.content["Saving Throws"],
+           "character_skills":self.content["Skills"],
+           "character_health":self.content["Health"],
+           "character_attacks_n_spellcasting":self.content["Attacks and SpellCasting"],
+           "character_personality":self.content["Personality"],
+           "character_feature_n_traits":self.content["Feature & Traits"]
+           }  
+        azure_cosmos_client.insert_items(item)
+        operations = [{ 'op': 'replace', 'path': '/update_reason', 'value': self.type },
+                { 'op': 'add', 'path': f'/{self.type}_{self.player_number}_name', 'value': self.content["Definition"]["Character Name"]},
+                { 'op': 'add', 'path': '/player_count', 'value': self.player_number}
+                    ]
+        
+        azure_cosmos_client.patching_items(self.session_id,f"{self.session_id}_session",operations)   
+            # world_choice = input(f"Choose from the following: {characters_string}")
+        
 class Encounter(Location):
     def __init__(self,session):
         super().__init__(session)
