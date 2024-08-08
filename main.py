@@ -19,7 +19,7 @@ async def main():
     with open("prompt.json") as prompt_file:
                 prompt_json=json.load(prompt_file)
             
-            #Create session and open ai client
+    #Create session and open ai client
     azure_open_ai_client = AzureOpenAIClient()
     azure_cosmos_client = AzureCosmosDBClient()
 
@@ -34,9 +34,11 @@ async def main():
            "type":session.type,
            "app_version":app_version,
            "status":"Creating",
-           "update_reason":session.type
+           "update_reason":session.type,
+           "player_count":0
            }
     azure_cosmos_client.insert_items(item)
+    
 
     #create world
 #     world = World(session)
@@ -98,12 +100,16 @@ async def main():
 
 #     location_content = await location.get_content(azure_cosmos_client)
 
-
+    
+    
     # TODO Loop to create 4 characters
-
-    charachter = Characters(session)
-    charachter.player_number = 1
-    await charachter.create_characters(azure_open_ai_client,azure_cosmos_client)
+    leger = session.get_leger(azure_cosmos_client)
+    player_count = 0
+    while leger["player_count"] != 4:
+        player_count += 1
+        charachter = Characters(session)
+        charachter.player_number = player_count
+        await charachter.create_characters(azure_open_ai_client,azure_cosmos_client)
     
     
 #      location.item = item

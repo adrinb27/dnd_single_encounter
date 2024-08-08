@@ -9,6 +9,17 @@ class Session():
     def __init__(self):
         self.session_id= ''.join(random.choice('0123456789') for i in range(8))
         self.type="session"
+    def get_leger(self,cosmos_client):
+        database = cosmos_client.client.get_database_client(cosmos_client.database)
+        container = database.get_container_client(cosmos_client.container)
+        
+        query = f'SELECT * FROM mycontainer c WHERE c.id="{self.session_id}" and c.sessionid_type="{self.session_id}_{self.type}"'
+        
+        items = container.query_items(query=query,enable_cross_partition_query=True)
+        content = {}
+        for item in items:
+            content = item
+        return content
 
 class World(Session):
     
@@ -16,27 +27,34 @@ class World(Session):
         super().__init__()
         self.session_id= session.session_id
         self.type = "world"
-        self.world = {}
+        # self.world = {}
         self.item = {}
         self.content = {}
 
-    async def create_world(self,oai_client,system_prompt,prompt):
-        worlds = await oai_client.call_openai_model(system_message = system_prompt, 
-                                        user_message = prompt, 
-                                        model=oai_client.azure_oai_deployment
-                                        )
-            
-        # clean output
-        worlds= worlds.replace('```', '')
-        worlds= worlds.replace('json', '')
-        #store in session
-        
-        worlds = json.loads(worlds)
+    async def create_world(self,azure_open_ai_client,azure_cosmos_client):
+        user_text = "Create a world"
+        await self.create_content(
+                oai_client=azure_open_ai_client,
+                system_prompt=prompt_json['world_json'][0],
+                prompt=user_text
+                )
+        # insert world item to cosmos container
+        item = { 
+                "id":self.session_id,
+                "sessionid_type":f"{self.session_id}_{self.type}",
+                "session_id":self.session_id,
+                "type":self.type,
+                self.type:self.content
+                }  
+        azure_cosmos_client.insert_items(item)
+        self.item = item
 
-        worlds_string = create_string_from_dict_attributes(worlds)
-        world_choice = input(f"Choose from the following: {worlds_string}")
-        self.world = worlds[world_choice]
-        self.world["name"] = world_choice
+        # Update leger
+        operations = [{ 'op': 'replace', 'path': '/update_reason', 'value': self.type },
+                { 'op': 'add', 'path': f'/{self.type}_name', 'value': self.content["name"]}
+                        ]
+
+        azure_cosmos_client.patching_items(self.session_id,f"{self.session_id}_session",operations)
     
     async def get_content(self,cosmos_client):
         database = cosmos_client.client.get_database_client(cosmos_client.database)
@@ -160,33 +178,46 @@ class Characters(World):
         res = random.sample(range(1, 30), 1)
 
         user_text = f"Create 1 unique characters that are {character_traits[res[0]]} respectively"
-
+        
         await self.create_content(
                 oai_client=azure_open_ai_client,
                     system_prompt=prompt_json['character_json'][0],
                     prompt=user_text
                     )
         # print(character.content["Feature & Traits"])
-        item = {
-           "id":self.session_id,
-           "sessionid_type":f"{self.session_id}_{self.type}",
-           "session_id":self.session_id,
-           self.type:self.content,
-           "type":self.type,
-           "player_number":self.player_number,
-           "charachter_definition":self.content["Definition"],
-           "character_stats":self.content["Stats"],
-           "character_saving_throws":self.content["Saving Throws"],
-           "character_skills":self.content["Skills"],
-           "character_health":self.content["Health"],
-           "character_attacks_n_spellcasting":self.content["Attacks and SpellCasting"],
-           "character_personality":self.content["Personality"],
-           "character_feature_n_traits":self.content["Feature & Traits"]
-           }  
+        if self.player_number == 1:
+            item = {
+                "id":self.session_id,
+                "sessionid_type":f"{self.session_id}_{self.type}",
+                "session_id":self.session_id,
+                "type":self.type,
+                "player_number":self.player_number,
+                f"charachter_definition_{self.player_number}":self.content["Definition"],
+                f"character_stats_{self.player_number}":self.content["Stats"],
+                f"character_saving_throws_{self.player_number}":self.content["Saving Throws"],
+                f"character_skills_{self.player_number}":self.content["Skills"],
+                f"character_health_{self.player_number}":self.content["Health"],
+                f"character_attacks_n_spellcasting_{self.player_number}":self.content["Attacks and SpellCasting"],
+                f"character_personality_{self.player_number}":self.content["Personality"],
+                f"character_feature_n_traits_{self.player_number}":self.content["Feature & Traits"]
+                }
+        else:
+            operations = [
+                { 'op': 'add', 'path': f'/charachter_definition_{self.player_number}', 'value': self.content["Definition"]},
+                { 'op': 'add', 'path': f'/charachter_definition_{self.player_number}', 'value': self.content["Stats"]},
+                { 'op': 'add', 'path': f'/charachter_definition_{self.player_number}', 'value': self.content["Saving Throws"]},
+                { 'op': 'add', 'path': f'/charachter_definition_{self.player_number}', 'value': self.content["Skills"]},
+                { 'op': 'add', 'path': f'/charachter_definition_{self.player_number}', 'value': self.content["Health"]},
+                { 'op': 'add', 'path': f'/charachter_definition_{self.player_number}', 'value': self.content["Attacks and SpellCasting"]},
+                { 'op': 'add', 'path': f'/charachter_definition_{self.player_number}', 'value': self.content["Personality"]},
+                { 'op': 'add', 'path': f'/charachter_definition_{self.player_number}', 'value': self.content["Feature & Traits"]}
+                
+                  ]
+        
         azure_cosmos_client.insert_items(item)
         operations = [{ 'op': 'replace', 'path': '/update_reason', 'value': self.type },
                 { 'op': 'add', 'path': f'/{self.type}_{self.player_number}_name', 'value': self.content["Definition"]["Character Name"]},
-                { 'op': 'add', 'path': '/player_count', 'value': self.player_number}
+                { 'op': 'replace', 'path': '/player_count', 'value': self.player_number}
                     ]
         
         azure_cosmos_client.patching_items(self.session_id,f"{self.session_id}_session",operations)   
