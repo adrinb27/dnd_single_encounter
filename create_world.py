@@ -33,10 +33,10 @@ async def main():
            "player_count":0
            }
     azure_cosmos_client.insert_items(item)
-    
+    user_text = "Create a world"
     #create world
     world = World(session)
-    await world.create_world(azure_open_ai_client,azure_cosmos_client)
+    await world.create_world(azure_open_ai_client,azure_cosmos_client,user_text)
     
 
     # world_content = await world.get_content(azure_cosmos_client)

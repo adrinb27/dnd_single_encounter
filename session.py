@@ -31,8 +31,8 @@ class World(Session):
         self.item = {}
         self.content = {}
 
-    async def create_world(self,azure_open_ai_client,azure_cosmos_client):
-        user_text = "Create a world"
+    async def create_world(self,azure_open_ai_client,azure_cosmos_client,user_text):
+        # user_text = "Create a world"
         await self.create_content(
                 oai_client=azure_open_ai_client,
                 system_prompt=prompt_json['world_json'][0],
